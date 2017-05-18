@@ -99,7 +99,7 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     self.torThread = nil;
 }
 
-#pragma mark - 
+#pragma mark -
 
 - (void)setupWithCompletion:(CPABootstrapCompletionBlock)completion
                    progress:(CPABootstrapProgressBlock)progress
@@ -273,17 +273,16 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     }
     self.bootstrapProgress = progress;
     
-    if (self.progressBlock) {
+    CPABootstrapProgressBlock progressBlock = self.progressBlock;
+    if (progressBlock) {
         NSString *summaryString = [CPAProxyResponseParser bootstrapSummaryForResponse:response];
-        __weak typeof(self)weakSelf = self;
         dispatch_async(self.callbackQueue, ^{
-            __strong typeof(weakSelf)strongSelf = weakSelf;
-            if (strongSelf.progressBlock) {
-                strongSelf.progressBlock(progress,summaryString);
+            if (progressBlock) {
+                progressBlock(progress, summaryString);
             }
         });
     }
-
+    
     if (progress == CPABootstrapProgressPercentageDone) {
         self.status = CPAStatusOpen;
         [self removeTimeoutTimer];
@@ -291,12 +290,13 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
         
         NSString *socksHost = self.configuration.socksHost;
         NSUInteger socksPort = self.configuration.socksPort;
-        if (self.completionBlock) {
-            __weak typeof(self)weakSelf = self;
+        CPABootstrapCompletionBlock completionBlock = self.completionBlock;
+        if (completionBlock) {
+            __weak typeof(self) weakSelf = self;
             dispatch_async(self.callbackQueue, ^{
                 __strong typeof(weakSelf)strongSelf = weakSelf;
-                if (strongSelf.completionBlock) {
-                    strongSelf.completionBlock(socksHost, socksPort, nil);
+                if (completionBlock) {
+                    completionBlock(socksHost, socksPort, nil);
                 }
                 strongSelf.completionBlock = nil;
                 strongSelf.progressBlock = nil;
@@ -336,12 +336,13 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     [self removeTimeoutTimer];
     [self postNotificationWithName:CPAProxyDidFailSetupNotification];
     
-    if (self.completionBlock) {
+    CPABootstrapCompletionBlock completionBlock = self.completionBlock;
+    if (completionBlock) {
         __weak typeof(self)weakSelf = self;
         dispatch_async(self.callbackQueue, ^{
             __strong typeof(weakSelf)strongSelf = weakSelf;
-            if (strongSelf.completionBlock) {
-                strongSelf.completionBlock(nil, 0, error);
+            if (completionBlock) {
+                completionBlock(nil, 0, error);
             }
             strongSelf.completionBlock = nil;
             strongSelf.progressBlock = nil;
