@@ -182,6 +182,7 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
 
 - (void)disconnectTor {
     [self.socketManager disconnect];
+    self.controlPortStatus = CPAControlPortStatusClosed;
 }
 
 #pragma mark - CPASocketManagerDelegate methods

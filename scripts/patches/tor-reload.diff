@@ -1,18 +1,8 @@
-From 97c17d27f0faee95ac3065026f05377a8eb7fe79 Mon Sep 17 00:00:00 2001
-From: John Beanie <j.beanie@ynd-consult.com>
-Date: Sun, 10 Jul 2016 15:19:25 +0200
-Subject: [PATCH 2/2] Adding tor_reload for restarting TOR.
-
----
- src/or/connection.c |  2 +-
- src/or/main.c       | 62 ++++++++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 62 insertions(+), 2 deletions(-)
-
 diff --git a/src/or/connection.c b/src/or/connection.c
-index 123c33a..cdf12ba 100644
+index d30ec46..c5e1139 100644
 --- a/src/or/connection.c
 +++ b/src/or/connection.c
-@@ -2373,7 +2373,7 @@ retry_listener_ports(smartlist_t *old_conns,
+@@ -2540,7 +2540,7 @@ retry_listener_ports(smartlist_t *old_conns,
        }
      } SMARTLIST_FOREACH_END(wanted);
  
@@ -22,27 +12,63 @@ index 123c33a..cdf12ba 100644
        //log_debug(LD_NET, "Already have %s on %s:%d",
        //    conn_type_to_string(found_port->type), conn->address, conn->port);
 diff --git a/src/or/main.c b/src/or/main.c
-index bd4f7ea..0037e6b 100644
+index 66a8571..d75f2c2 100644
 --- a/src/or/main.c
 +++ b/src/or/main.c
-@@ -1922,6 +1922,16 @@ retry_listeners_callback(time_t now, const or_options_t *options)
+@@ -96,6 +96,7 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
+ static int connection_should_read_from_linked_conn(connection_t *conn);
+ static int run_main_loop_until_done(void);
+ static void process_signal(int sig);
++static void tor_reload_inner(void);
+ 
+ /********* START VARIABLES **********/
+ int global_read_bucket; /**< Max number of bytes I can read this second. */
+@@ -170,6 +171,11 @@ static int can_complete_circuits = 0;
+  */
+ int quiet_level = 0;
+ 
++/** Flag: Set to true if you want to reload tor */
++static int should_reload = 0;
++
++static tor_mutex_t *reload_lock = NULL;
++
+ /********* END VARIABLES ************/
+ 
+ /****************************************************************************
+@@ -2368,6 +2374,13 @@ run_main_loop_once(void)
+ 
+   if (nt_service_is_stopping())
+     return 0;
++    
++  tor_mutex_acquire(reload_lock);
++  if (should_reload == 1) {
++    should_reload = 0;
++    tor_reload_inner();    
++  }
++  tor_mutex_release(reload_lock);
+ 
+ #ifndef _WIN32
+   /* Make it easier to tell whether libevent failure is our fault or not. */
+@@ -2789,7 +2802,9 @@ tor_init(int argc, char *argv[])
+   /* Initialize the service cache. */
+   rend_cache_init();
+   addressmap_init(); /* Init the client dns cache. Do it always, since it's
+-                      * cheap. */
++                      * cheap. */                  
++  
++  reload_lock = tor_mutex_new();
+ 
+   {
+   /* We search for the "quiet" option first, since it decides whether we
+@@ -3020,6 +3035,7 @@ tor_free_all(int postfork)
+     esc_router_info(NULL);
+     logs_free_all(); /* free log strings. do this last so logs keep working. */
+   }
++  tor_mutex_free(reload_lock);
  }
  
- static int
-+force_retry_listeners_callback(time_t now, const or_options_t *options)
-+{
-+  (void)now;
-+  (void)options;
-+  retry_all_listeners(NULL, NULL, 1);
-+  retry_all_listeners(NULL, NULL, 0);
-+  return PERIODIC_EVENT_NO_UPDATE;
-+}
-+
-+static int
- expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
- {
-   (void)options;
-@@ -3192,7 +3202,7 @@ tor_cleanup(void)
+ /** Do whatever cleanup is necessary before shutting Tor down. */
+@@ -3058,7 +3074,7 @@ tor_cleanup(void)
  #ifdef USE_DMALLOC
    dmalloc_log_stats();
  #endif
@@ -51,14 +77,27 @@ index bd4f7ea..0037e6b 100644
                        later, if it makes shutdown unacceptably slow.  But for
                        now, leave it here: it's helped us catch bugs in the
                        past. */
-@@ -3523,6 +3533,56 @@ sandbox_init_filter(void)
+@@ -3417,6 +3433,67 @@ sandbox_init_filter(void)
    return cfg;
  }
  
 +void
 +tor_reload(void)
 +{
++  tor_mutex_acquire(reload_lock);
++
++  should_reload = 1;
++  /* Breaking the event loop so the main loop can make another turn & tor_reload_inner can get executed */
++  tell_event_loop_to_finish();
++
++  tor_mutex_release(reload_lock);
++}
++
++static void
++tor_reload_inner(void)
++{
 +  log_info(LD_GENERAL, "Tor reloading itself now!");
++ 
 +  const or_options_t *options = get_options();
 +
 +#ifdef USE_DMALLOC
@@ -98,16 +137,11 @@ index bd4f7ea..0037e6b 100644
 +    cpuworkers_rotate_keyinfo();
 +    dns_reset();
 +  }
-+
-+  struct event *ev;
-+  struct timeval one_second = { 1,0 };
-+  ev = event_new(tor_libevent_get_base(), -1, EV_TIMEOUT, force_retry_listeners_callback, (char*)"Forced listeners retry");
-+  event_add(ev, &one_second);
++    
++  retry_all_listeners(NULL, NULL, 1);
++  retry_all_listeners(NULL, NULL, 0);
 +}
 +
  /** Main entry point for the Tor process.  Called from main(). */
  /* This function is distinct from main() only so we can link main.c into
   * the unittest binary without conflicting with the unittests' main. */
--- 
-2.7.1
-

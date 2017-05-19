@@ -142,6 +142,7 @@ const long CPASocketWriteTag = 110;
     self.socket.delegate = nil;
     [self.socket disconnect];
     self.socket.delegate = self;
+    self.isConnected = NO;
 }
 
 - (void)handleSocketDisconnectedWithError:(NSError *)error
