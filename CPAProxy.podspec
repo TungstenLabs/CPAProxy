@@ -21,13 +21,14 @@ Pod::Spec.new do |s|
   s.ios.private_header_files = "CPAProxyDependencies-iOS/tor_cpaproxy.h"
   s.ios.vendored_libraries  = "CPAProxyDependencies-iOS/*.a"
   s.ios.resource_bundles = {"CPAProxy" => ["CPAProxyDependencies-iOS/geoip", "CPAProxyDependencies-iOS/geoip6", "CPAProxyDependencies-iOS/torrc"]}
+  s.ios.exclude_files = "CPAProxyDependencies-macOS/**"
 
   s.osx.deployment_target = "10.10"
   s.osx.source_files = "CPAProxy/*.{h,m}", "CPAProxyDependencies-macOS/tor_cpaproxy.h"
   s.osx.private_header_files = "CPAProxyDependencies-macOS/tor_cpaproxy.h"
   s.osx.vendored_libraries  = "CPAProxyDependencies-macOS/*.a"
   s.osx.resource_bundles = {"CPAProxy" => ["CPAProxyDependencies-macOS/geoip", "CPAProxyDependencies-macOS/geoip6", "CPAProxyDependencies-macOS/torrc"]}
-
+  s.osx.exclude_files = "CPAProxyDependencies-iOS/**"
 
   s.libraries   = 'crypto', 'curve25519_donna', 'event_core', 'event_extra', 'event_openssl',
                   'event_pthreads', 'event', 'or-crypto', 'or-event', 'or', 'ssl', 'tor', 'z',
