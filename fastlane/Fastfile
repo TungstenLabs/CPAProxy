@@ -1,0 +1,39 @@
+fastlane_version "2.45.0"
+default_platform :ios
+
+before_all do
+end
+
+desc "Publish pod to YND private podspec repo"
+lane :publish do
+  pod_version = version_get_podspec
+  
+  if git_tag_exists(tag: pod_version)
+    UI.user_error!("Version #{pod_version} already exists!")
+  end
+
+  add_git_tag(tag: pod_version)
+  push_git_tags
+  
+  pod_repo_add(
+    repo_name: "ynd", 
+    repo_url: "git@bitbucket.org:ynd-consult-gmbh/cocoapods-spec-repo.git"
+  )
+
+  pod_push(
+    path: "CPAProxy.podspec",
+    allow_warnings: true,
+    use_libraries: true,
+    repo: "ynd",
+    sources: [
+      "git@bitbucket.org:ynd-consult-gmbh/cocoapods-spec-repo.git",
+      "https://github.com/CocoaPods/Specs"
+    ]
+  )
+end
+
+after_all do |lane|
+end
+
+error do |lane, exception|  
+end
