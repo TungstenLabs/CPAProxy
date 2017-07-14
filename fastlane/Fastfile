@@ -22,6 +22,7 @@ desc "Lint pod by checking podspec"
 lane :lint do
   pod_lib_lint(
     allow_warnings:true,
+    use_libraries:true,
     sources: [
       ynd_pods_spec_repo[:address],
       "https://github.com/CocoaPods/Specs"
@@ -37,6 +38,7 @@ lane :publish do
   pod_push(
     path: podspec_path,
     allow_warnings:true,
+    use_libraries:true,
     repo: ynd_pods_spec_repo[:name],
     sources: [
       ynd_pods_spec_repo[:address],
