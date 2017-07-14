@@ -19,3 +19,10 @@ profile
 Pods/
 scripts/build/
 scripts/built/
+
+/fastlane/Appfile
+/fastlane/README.md
+/fastlane/report.xml
+
+/.bundle
+/vendor

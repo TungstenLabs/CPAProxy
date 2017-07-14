@@ -6,6 +6,9 @@ if ("${env.BRANCH_NAME}" ==~ /PR-\d*/) {
   echo "Performing stages for pull request branch ${env.BRANCH_NAME}"
   runOnNode {
     fullCleanAndSetup()
+    stage('Lint pod') {
+      cmd_bundle_exec "fastlane lint"
+    }
   }
 } else if ("${env.BRANCH_NAME}" ==~ /no_modules/) {
   echo "Performing stages after merge to branch ${env.BRANCH_NAME}"
