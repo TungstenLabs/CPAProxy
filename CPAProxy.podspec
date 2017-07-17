@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name            = "CPAProxy"
-  s.version         = "1.2.0"
+  s.version         = "1.2.1"
   s.summary         = "CPAProxy is a thin Objective-C wrapper around Tor."
   s.author          = "Claudiu-Vlad Ursache <claudiu.vlad.ursache@gmail.com>"
 
@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
     bash ./scripts/build-all.sh
   CMD
 
-  s.dependency 'CocoaAsyncSocket'
+  s.dependency 'CocoaAsyncSocket', '~> 7.6.1'
 
   s.ios.deployment_target = "8.0"
   s.ios.source_files = "CPAProxy/*.{h,m}", "CPAProxyDependencies-iOS/tor_cpaproxy.h"
