@@ -7,8 +7,9 @@ ynd_pods_spec_repo = {
   :address => "git@bitbucket.org:ynd-consult-gmbh/cocoapods-spec-repo.git"
 }
 
-before_all do  
-  if git_tag_exists(tag: version_get_podspec)
+before_all do
+  pod_version = version_get_podspec
+  if git_tag_exists(tag: pod_version)
     UI.user_error!("Version #{pod_version} already exists! Make sure to update!")
   end
 
@@ -22,7 +23,6 @@ desc "Lint pod by checking podspec"
 lane :lint do
   pod_lib_lint(
     allow_warnings:true,
-    use_libraries:true,
     sources: [
       ynd_pods_spec_repo[:address],
       "https://github.com/CocoaPods/Specs"
@@ -38,7 +38,6 @@ lane :publish do
   pod_push(
     path: podspec_path,
     allow_warnings:true,
-    use_libraries:true,
     repo: ynd_pods_spec_repo[:name],
     sources: [
       ynd_pods_spec_repo[:address],
