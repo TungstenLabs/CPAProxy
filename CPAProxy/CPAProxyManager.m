@@ -133,7 +133,9 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     
     // Only start the tor thread if it's not already executing
     if (self.torThread.isExecuting) {
-        [self.torThread reload];
+        dispatch_async(self.callbackQueue, ^{
+            [self.torThread reload];
+        });
     } else {
         [self.torThread start];
     }
