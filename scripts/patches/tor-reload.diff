@@ -1,21 +1,8 @@
-diff --git a/src/or/connection.c b/src/or/connection.c
-index d30ec46..c5e1139 100644
---- a/src/or/connection.c
-+++ b/src/or/connection.c
-@@ -2540,7 +2540,7 @@ retry_listener_ports(smartlist_t *old_conns,
-       }
-     } SMARTLIST_FOREACH_END(wanted);
- 
--    if (found_port) {
-+    if (found_port && ! control_listeners_only) {
-       /* This listener is already running; we don't need to launch it. */
-       //log_debug(LD_NET, "Already have %s on %s:%d",
-       //    conn_type_to_string(found_port->type), conn->address, conn->port);
 diff --git a/src/or/main.c b/src/or/main.c
-index 66a8571..d75f2c2 100644
+index 478316b..991e4d6 100644
 --- a/src/or/main.c
 +++ b/src/or/main.c
-@@ -96,6 +96,7 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
+@@ -135,6 +135,7 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
  static int connection_should_read_from_linked_conn(connection_t *conn);
  static int run_main_loop_until_done(void);
  static void process_signal(int sig);
@@ -23,7 +10,7 @@ index 66a8571..d75f2c2 100644
  
  /********* START VARIABLES **********/
  int global_read_bucket; /**< Max number of bytes I can read this second. */
-@@ -170,6 +171,11 @@ static int can_complete_circuits = 0;
+@@ -209,6 +210,11 @@ static int can_complete_circuits = 0;
   */
  int quiet_level = 0;
  
@@ -35,32 +22,30 @@ index 66a8571..d75f2c2 100644
  /********* END VARIABLES ************/
  
  /****************************************************************************
-@@ -2368,6 +2374,13 @@ run_main_loop_once(void)
- 
+@@ -2499,6 +2505,13 @@ run_main_loop_once(void)
    if (nt_service_is_stopping())
      return 0;
-+    
+ 
 +  tor_mutex_acquire(reload_lock);
 +  if (should_reload == 1) {
 +    should_reload = 0;
 +    tor_reload_inner();    
 +  }
 +  tor_mutex_release(reload_lock);
- 
++
  #ifndef _WIN32
    /* Make it easier to tell whether libevent failure is our fault or not. */
-@@ -2789,7 +2802,9 @@ tor_init(int argc, char *argv[])
-   /* Initialize the service cache. */
-   rend_cache_init();
+   errno = 0;
+@@ -2937,6 +2950,8 @@ tor_init(int argc, char *argv[])
    addressmap_init(); /* Init the client dns cache. Do it always, since it's
--                      * cheap. */
-+                      * cheap. */                  
-+  
-+  reload_lock = tor_mutex_new();
+                       * cheap. */
  
++  reload_lock = tor_mutex_new();
++
    {
    /* We search for the "quiet" option first, since it decides whether we
-@@ -3020,6 +3035,7 @@ tor_free_all(int postfork)
+    * will log anything at all to the command line. */
+@@ -3169,6 +3184,7 @@ tor_free_all(int postfork)
      esc_router_info(NULL);
      logs_free_all(); /* free log strings. do this last so logs keep working. */
    }
@@ -68,19 +53,10 @@ index 66a8571..d75f2c2 100644
  }
  
  /** Do whatever cleanup is necessary before shutting Tor down. */
-@@ -3058,7 +3074,7 @@ tor_cleanup(void)
- #ifdef USE_DMALLOC
-   dmalloc_log_stats();
- #endif
--  tor_free_all(0); /* We could move tor_free_all back into the ifdef below
-+  tor_free_all(1); /* We could move tor_free_all back into the ifdef below
-                       later, if it makes shutdown unacceptably slow.  But for
-                       now, leave it here: it's helped us catch bugs in the
-                       past. */
-@@ -3417,6 +3433,67 @@ sandbox_init_filter(void)
+@@ -3565,6 +3581,67 @@ sandbox_init_filter(void)
+ 
    return cfg;
  }
- 
 +void
 +tor_reload(void)
 +{
@@ -129,8 +105,9 @@ index 66a8571..d75f2c2 100644
 +
 +  if (server_mode(options)) {
 +    time_t now = approx_time();
-+    if (load_ed_keys(options, now) < 0 ||
-+         generate_ed_link_cert(options, now)) {
++    int new_signing_key = load_ed_keys(options, now);
++    if (new_signing_key < 0 ||
++        generate_ed_link_cert(options, now, new_signing_key > 0)) {
 +      log_warn(LD_OR, "Problem reloading Ed25519 keys; still using old keys.");
 +    }
 +
@@ -141,7 +118,6 @@ index 66a8571..d75f2c2 100644
 +  retry_all_listeners(NULL, NULL, 1);
 +  retry_all_listeners(NULL, NULL, 0);
 +}
-+
+ 
  /** Main entry point for the Tor process.  Called from main(). */
  /* This function is distinct from main() only so we can link main.c into
-  * the unittest binary without conflicting with the unittests' main. */

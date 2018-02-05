@@ -9,6 +9,8 @@
 
 set -e
 
+export PLATFORM_TARGET="macOS"
+
 if [  "${PLATFORM_TARGET}" == "" ]; then
   echo "No platform target set, using iOS."
   export PLATFORM_TARGET="iOS"
@@ -55,9 +57,9 @@ fi
 # Versions
 export MIN_IOS_VERSION="8.0"
 export MIN_OSX_VERSION="10.10"
-export OPENSSL_VERSION="1.0.2j"
+export OPENSSL_VERSION="1.0.2n"
 export LIBEVENT_VERSION="2.0.22-stable"
-export TOR_VERSION="0.2.9.8"
+export TOR_VERSION="0.3.0.13"
 
 BUILT_ARCHS=()
 DEVELOPER=`xcode-select --print-path`
