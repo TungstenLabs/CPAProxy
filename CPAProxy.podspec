@@ -1,12 +1,12 @@
 Pod::Spec.new do |s|
   s.name            = "CPAProxy"
-  s.version         = "1.2.4"
+  s.version         = "1.2.5"
   s.summary         = "CPAProxy is a thin Objective-C wrapper around Tor."
   s.author          = "Claudiu-Vlad Ursache <claudiu.vlad.ursache@gmail.com>"
 
-  s.homepage        = "https://github.com/ynd-consult-ug/CPAProxy"
+  s.homepage        = "https://github.com/TungstenLabs/CPAProxy"
   s.license         = { :type => 'MIT', :file => 'LICENSE.md' }
-  s.source          = { :git => "https://github.com/ynd-consult-ug/CPAProxy", :tag => s.version.to_s }
+  s.source          = { :git => "https://github.com/TungstenLabs/CPAProxy", :tag => s.version.to_s }
   s.prepare_command = <<-CMD
     export PLATFORM_TARGET="iOS"
     bash ./scripts/build-all.sh
