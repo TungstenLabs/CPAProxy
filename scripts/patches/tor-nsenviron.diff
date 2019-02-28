@@ -1,8 +1,10 @@
---- build/src/tor-0.2.6.2-alpha/src/common/compat.c.orig	2014-12-30 09:06:12.000000000 -0500
-+++ build/src/tor-0.2.6.2-alpha/src/common/compat.c	2015-02-09 23:54:12.000000000 -0500
-@@ -2173,28 +2173,28 @@
+diff --git a/src/lib/process/env.c b/src/lib/process/env.c
+index 0060200..3184a05 100644
+--- a/src/lib/process/env.c
++++ b/src/lib/process/env.c
+@@ -28,28 +28,28 @@
+ #include <crt_externs.h>
  #endif
- }
  
 -#ifndef HAVE__NSGETENVIRON
 +//#ifndef HAVE__NSGETENVIRON
@@ -11,9 +13,9 @@
  #ifndef RUNNING_DOXYGEN
  extern char **environ;
  #endif
- #endif
--#endif
-+//#endif
+ #endif /* !defined(HAVE_EXTERN_ENVIRON_DECLARED) */
+-#endif /* !defined(HAVE__NSGETENVIRON) */
++//#endif /* !defined(HAVE__NSGETENVIRON) */
  
  /** Return the current environment. This is a portable replacement for
   * 'environ'. */
@@ -26,12 +28,12 @@
     * when we do a mostly-static build on OSX 10.7, the resulting binary won't
     * work on OSX 10.6. */
 -  return *_NSGetEnviron();
--#else
+-#else /* !(defined(HAVE__NSGETENVIRON)) */
 +//  return *_NSGetEnviron();
-+//#else
++//#else /* !(defined(HAVE__NSGETENVIRON)) */
    return environ;
--#endif
-+//#endif
+-#endif /* defined(HAVE__NSGETENVIRON) */
++//#endif /* defined(HAVE__NSGETENVIRON) */
  }
  
- /** Get name of current host and write it to <b>name</b> array, whose
+ /** Helper: return the number of characters in <b>s</b> preceding the first

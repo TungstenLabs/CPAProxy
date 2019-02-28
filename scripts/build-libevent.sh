@@ -13,8 +13,6 @@ tar zxf "${ARCHIVE_NAME}.tar.gz"
 
 pushd "${ARCHIVE_NAME}"
 
-   patch -p3 < "${TOPDIR}/patches/libevent-configure.diff" configure
-
    CC="${CLANG}"
 
    

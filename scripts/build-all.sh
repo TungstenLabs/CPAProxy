@@ -7,9 +7,8 @@
 # USE_BUILD_LOG: true false
 # PLATFORM_TARGET: iOS macOS
 
-set -e
 
-export PLATFORM_TARGET="macOS"
+set -e
 
 if [  "${PLATFORM_TARGET}" == "" ]; then
   echo "No platform target set, using iOS."
@@ -42,7 +41,7 @@ else
 	if [ "$PLATFORM_TARGET" == "iOS" ]; then
   	ARCHS="i386 x86_64 armv7 arm64"
   else
-  	ARCHS="i386 x86_64"
+  	ARCHS="x86_64"
   fi
   echo "Building architectures: ${ARCHS}"
 fi
@@ -57,9 +56,10 @@ fi
 # Versions
 export MIN_IOS_VERSION="8.0"
 export MIN_OSX_VERSION="10.10"
-export OPENSSL_VERSION="1.0.2n"
-export LIBEVENT_VERSION="2.0.22-stable"
-export TOR_VERSION="0.3.0.13"
+#export OPENSSL_VERSION="1.1.1b"
+export OPENSSL_VERSION="1.0.2r"
+export LIBEVENT_VERSION="2.1.8-stable"
+export TOR_VERSION="0.3.5.8"
 
 BUILT_ARCHS=()
 DEVELOPER=`xcode-select --print-path`
@@ -144,7 +144,7 @@ do
     else
       ../build-${LIBRARY}.sh
     fi
-
+    
     # Remove junk
     rm -rf "${ROOTDIR}"
   done
@@ -156,7 +156,8 @@ cd ../
 # Combine binaries of different architectures results
 BINS=(libcrypto.a libssl.a)
 BINS+=(libevent_core.a libevent_pthreads.a libevent_extra.a libevent_openssl.a libevent.a)
-BINS+=(libcurve25519_donna.a libor-crypto.a libtor.a libor-event.a libor.a libor-trunnel.a libed25519_donna.a libed25519_ref10.a libor-ctime.a libkeccak-tiny.a)
+#BINS+=(libcurve25519_donna.a libor-crypto.a libtor.a libor-event.a libor.a libor-trunnel.a libed25519_donna.a libed25519_ref10.a libor-ctime.a libkeccak-tiny.a)
+BINS+=(libed25519_ref10.a libed25519_donna.a libkeccak-tiny.a libtor-err.a libtor-ctime.a libtor-compress.a libtor-container.a libtor-crypt-ops.a libtor-encoding.a libtor-evloop.a libtor-fdio.a libtor-fs.a libcurve25519_donna.a libtor-intmath.a libtor-lock.a libtor-log.a libtor-math.a libtor-memarea.a libtor-meminfo.a libtor-malloc.a libtor-net.a libtor-osinfo.a libtor-process.a libtor-sandbox.a libtor-string.a libtor-smartlist-core.a libtor-term.a libtor-thread.a libtor-time.a libtor-tls.a libtor-trace.a libtor-wallclock.a libor-trunnel.a libtor-app.a libtor-geoip.a)
 
 NUMBER_OF_BUILT_ARCHS=${#BUILT_ARCHS[@]}
 

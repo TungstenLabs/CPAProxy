@@ -1,123 +1,141 @@
-diff --git a/src/or/main.c b/src/or/main.c
-index 478316b..991e4d6 100644
---- a/src/or/main.c
-+++ b/src/or/main.c
-@@ -135,6 +135,7 @@ static void connection_start_reading_from_linked_conn(connection_t *conn);
- static int connection_should_read_from_linked_conn(connection_t *conn);
- static int run_main_loop_until_done(void);
- static void process_signal(int sig);
-+static void tor_reload_inner(void);
+diff --git a/src/app/main/main.c b/src/app/main/main.c
+index c45c87d..2ba9352 100755
+--- a/src/app/main/main.c
++++ b/src/app/main/main.c
+@@ -219,6 +219,17 @@ do_hup(void)
+   return 0;
+ }
  
- /********* START VARIABLES **********/
- int global_read_bucket; /**< Max number of bytes I can read this second. */
-@@ -209,6 +210,11 @@ static int can_complete_circuits = 0;
++void
++tor_do_hup_and_retry_listeners(void)
++{
++  log_info(LD_GENERAL, "Tor reloading itself now!");
++ 
++  do_hup();
++    
++  retry_all_listeners(NULL, 1);
++  retry_all_listeners(NULL, 0);
++}
++
+ /** Libevent callback: invoked when we get a signal.
   */
- int quiet_level = 0;
+ static void
+@@ -561,6 +572,8 @@ tor_init(int argc, char *argv[])
+   /* Initialize the HS subsystem. */
+   hs_init();
+ 
++  tor_init_tor_reload();
++
+   {
+   /* We search for the "quiet" option first, since it decides whether we
+    * will log anything at all to the command line. */
+@@ -1516,3 +1529,9 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
+   tor_free(argv);
+   return result;
+ }
++
++void
++tor_reload(void)
++{
++  tor_mainloop_reload();
++}
+diff --git a/src/core/mainloop/mainloop.c b/src/core/mainloop/mainloop.c
+index 6e2b300..d5e6e6e 100755
+--- a/src/core/mainloop/mainloop.c
++++ b/src/core/mainloop/mainloop.c
+@@ -192,6 +192,11 @@ static int main_loop_exit_value = 0;
+  */
+ static int can_complete_circuits = 0;
  
 +/** Flag: Set to true if you want to reload tor */
 +static int should_reload = 0;
 +
 +static tor_mutex_t *reload_lock = NULL;
 +
- /********* END VARIABLES ************/
+ /** How often do we check for router descriptors that we should download
+  * when we have too little directory info? */
+ #define GREEDY_DESCRIPTOR_RETRY_INTERVAL (10)
+@@ -411,6 +416,13 @@ schedule_active_linked_connections_cb(mainloop_event_t *event, void *arg)
+   }
+ }
  
- /****************************************************************************
-@@ -2499,6 +2505,13 @@ run_main_loop_once(void)
-   if (nt_service_is_stopping())
++/** init tor reload lock */
++void 
++tor_init_tor_reload(void)
++{
++  reload_lock = tor_mutex_new();
++}
++
+ /** Initialize the global connection list, closeable connection list,
+  * and active connection list. */
+ void
+@@ -2781,6 +2793,34 @@ do_main_loop(void)
+ static ratelim_t libevent_error_ratelim = RATELIM_INIT(10);
+ #endif
+ 
++/** If we called event_base_loop() and told it to never stop until it
++ * runs out of events, now we've changed our mind: tell it we want it to
++ * finish. */
++void
++tell_event_loop_to_finish(void)
++{
++  if (!called_loop_once) {
++    static struct timeval exit_now;
++    exit_now.tv_sec  = 0;
++    exit_now.tv_usec = 0;
++
++    tor_libevent_exit_loop_after_delay(tor_libevent_get_base(), &exit_now);
++    called_loop_once = 1; /* hack to avoid adding more exit events */
++  }
++}
++
++void 
++tor_mainloop_reload(void) 
++{
++  tor_mutex_acquire(reload_lock);
++
++  should_reload = 1;
++  /* Breaking the event loop so the main loop can make another turn & tor_do_hup_and_retry_listeners can get executed */
++  tell_event_loop_to_finish();
++
++  tor_mutex_release(reload_lock);
++}
++
+ /**
+  * Run the main loop a single time. Return 0 for "exit"; -1 for "exit with
+  * error", and 1 for "run this again."
+@@ -2796,6 +2836,13 @@ run_main_loop_once(void)
+   if (main_loop_should_exit)
      return 0;
  
 +  tor_mutex_acquire(reload_lock);
 +  if (should_reload == 1) {
 +    should_reload = 0;
-+    tor_reload_inner();    
++    tor_do_hup_and_retry_listeners();    
 +  }
 +  tor_mutex_release(reload_lock);
 +
  #ifndef _WIN32
    /* Make it easier to tell whether libevent failure is our fault or not. */
    errno = 0;
-@@ -2937,6 +2950,8 @@ tor_init(int argc, char *argv[])
-   addressmap_init(); /* Init the client dns cache. Do it always, since it's
-                       * cheap. */
- 
-+  reload_lock = tor_mutex_new();
-+
-   {
-   /* We search for the "quiet" option first, since it decides whether we
-    * will log anything at all to the command line. */
-@@ -3169,6 +3184,7 @@ tor_free_all(int postfork)
-     esc_router_info(NULL);
-     logs_free_all(); /* free log strings. do this last so logs keep working. */
-   }
+@@ -2939,4 +2986,5 @@ tor_mainloop_free_all(void)
+   current_second = 0;
+   memset(&current_second_last_changed, 0,
+          sizeof(current_second_last_changed));
 +  tor_mutex_free(reload_lock);
  }
+diff --git a/src/core/mainloop/mainloop.h b/src/core/mainloop/mainloop.h
+index c5669fc..5bcdd1e 100755
+--- a/src/core/mainloop/mainloop.h
++++ b/src/core/mainloop/mainloop.h
+@@ -86,6 +86,10 @@ void reschedule_per_second_timer(void);
+ void do_signewnym(time_t);
+ time_t get_last_signewnym_time(void);
  
- /** Do whatever cleanup is necessary before shutting Tor down. */
-@@ -3565,6 +3581,67 @@ sandbox_init_filter(void)
- 
-   return cfg;
- }
-+void
-+tor_reload(void)
-+{
-+  tor_mutex_acquire(reload_lock);
++void tor_init_tor_reload(void);
++void tor_mainloop_reload(void);
++void tor_do_hup_and_retry_listeners(void);
 +
-+  should_reload = 1;
-+  /* Breaking the event loop so the main loop can make another turn & tor_reload_inner can get executed */
-+  tell_event_loop_to_finish();
-+
-+  tor_mutex_release(reload_lock);
-+}
-+
-+static void
-+tor_reload_inner(void)
-+{
-+  log_info(LD_GENERAL, "Tor reloading itself now!");
-+ 
-+  const or_options_t *options = get_options();
-+
-+#ifdef USE_DMALLOC
-+  dmalloc_log_stats();
-+  dmalloc_log_changed(0, 1, 0, 0);
-+#endif
-+
-+  if (accounting_is_enabled(options))
-+    accounting_record_bandwidth_usage(time(NULL), get_or_state());
-+
-+  router_reset_warnings();
-+  routerlist_reset_warnings();
-+  if (options_init_from_torrc(0, NULL) < 0) {
-+      return;
-+  }
-+  options = get_options();
-+  if (authdir_mode_handles_descs(options, -1)) {
-+    if (dirserv_load_fingerprint_file() < 0) {
-+      log_info(LD_GENERAL, "Error reloading fingerprints. "
-+               "Continuing with old list.");
-+    }
-+  }
-+
-+  circuit_mark_all_dirty_circs_as_unusable();
-+  router_reset_status_download_failures();
-+  router_reset_descriptor_download_failures();
-+  if (!options->DisableNetwork)
-+    update_networkstatus_downloads(time(NULL));
-+
-+  if (server_mode(options)) {
-+    time_t now = approx_time();
-+    int new_signing_key = load_ed_keys(options, now);
-+    if (new_signing_key < 0 ||
-+        generate_ed_link_cert(options, now, new_signing_key > 0)) {
-+      log_warn(LD_OR, "Problem reloading Ed25519 keys; still using old keys.");
-+    }
-+
-+    cpuworkers_rotate_keyinfo();
-+    dns_reset();
-+  }
-+    
-+  retry_all_listeners(NULL, NULL, 1);
-+  retry_all_listeners(NULL, NULL, 0);
-+}
- 
- /** Main entry point for the Tor process.  Called from main(). */
- /* This function is distinct from main() only so we can link main.c into
+ void tor_init_connection_lists(void);
+ void initialize_mainloop_events(void);
+ void tor_mainloop_free_all(void);
