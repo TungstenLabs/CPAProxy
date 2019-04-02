@@ -1,5 +1,5 @@
 diff --git a/src/app/main/main.c b/src/app/main/main.c
-index c45c87d..2ba9352 100755
+index c45c87d..44ec9c8 100755
 --- a/src/app/main/main.c
 +++ b/src/app/main/main.c
 @@ -219,6 +219,17 @@ do_hup(void)
@@ -12,7 +12,7 @@ index c45c87d..2ba9352 100755
 +  log_info(LD_GENERAL, "Tor reloading itself now!");
 + 
 +  do_hup();
-+    
++
 +  retry_all_listeners(NULL, 1);
 +  retry_all_listeners(NULL, 0);
 +}
@@ -39,6 +39,19 @@ index c45c87d..2ba9352 100755
 +{
 +  tor_mainloop_reload();
 +}
+diff --git a/src/core/mainloop/connection.c b/src/core/mainloop/connection.c
+index f2a646c..db1eb78 100755
+--- a/src/core/mainloop/connection.c
++++ b/src/core/mainloop/connection.c
+@@ -2826,7 +2826,7 @@ retry_listener_ports(smartlist_t *old_conns,
+       }
+     } SMARTLIST_FOREACH_END(wanted);
+ 
+-    if (found_port) {
++    if (found_port && !control_listeners_only) {
+       /* This listener is already running; we don't need to launch it. */
+       //log_debug(LD_NET, "Already have %s on %s:%d",
+       //    conn_type_to_string(found_port->type), conn->address, conn->port);
 diff --git a/src/core/mainloop/mainloop.c b/src/core/mainloop/mainloop.c
 index 6e2b300..d5e6e6e 100755
 --- a/src/core/mainloop/mainloop.c
