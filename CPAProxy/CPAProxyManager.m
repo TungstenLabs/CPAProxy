@@ -5,6 +5,7 @@
 //
 
 #import "CPAProxyManager.h"
+#import <CocoaLumberjack/CocoaLumberjack.h>
 #import "CPAThread.h"
 #import "CPAConfiguration.h"
 #import "CPASocketManager.h"
@@ -133,10 +134,16 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     
     // Only start the tor thread if it's not already executing
     if (self.torThread.isExecuting) {
+        DDLogDebug(@"[CPAProxyManager] torThread is executing. Reloading tor");
         dispatch_async(self.callbackQueue, ^{
             [self.torThread reload];
         });
+    } else if (self.torThread.isFinished) {
+        DDLogDebug(@"[CPAProxyManager] torThread have finished. Starting new tor thread");
+        self.torThread = [[CPAThread alloc] initWithConfiguration:self.configuration];
+        [self.torThread start];
     } else {
+        DDLogDebug(@"[CPAProxyManager] starting torThread");
         [self.torThread start];
     }
     
@@ -165,7 +172,7 @@ typedef NS_ENUM(NSUInteger, CPAControlPortStatus) {
     NSError *error = nil;
     [self.socketManager connectToHost:self.configuration.socksHost port:self.configuration.controlPort error:&error];
     if (error) {
-        NSLog(@"CPAProxyManager fail to connect to host: %@", error);
+        DDLogDebug(@"[CPAProxyManager] fail to connect to host: %@", error);
     }
 }
 
