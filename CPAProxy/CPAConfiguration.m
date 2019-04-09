@@ -5,6 +5,7 @@
 //
 
 #import "CPAConfiguration.h"
+#import "CPALogging.h"
 
 @interface CPAConfiguration ()
 @property (nonatomic, readwrite) NSUInteger controlPort;
@@ -83,6 +84,8 @@
         }
     }
     
+    [self changeProtectionLevelOfItemAtPath:path];
+    
     if (fileExists && isDirectory) {
         if ([self excludeDirectoryFromBackup:path error:nil]) {
             self.torDataDirectoryPath = path;
@@ -90,6 +93,24 @@
         }
     }
     return NO;
+}
+
+- (void)changeProtectionLevelOfItemAtPath:(NSString *)path {
+    NSError *error = nil;
+    BOOL result = [NSFileManager.defaultManager setAttributes:[self fileProtectionAttributes]
+                                                 ofItemAtPath:path
+                                                        error:&error];
+    if (!result) {
+        DDLogWarn(@"Failed to change file attribute on %@, error: %@", path.lastPathComponent, error);
+    }
+}
+
+- (NSDictionary *)fileProtectionAttributes {
+#if TARGET_OS_IPHONE
+    return @{NSFileProtectionKey: NSFileProtectionCompleteUntilFirstUserAuthentication};
+#else
+    return @{};
+#endif
 }
 
 - (BOOL)createTorTemporaryDirectoryAtPath:(NSString *)path error:(NSError **)error

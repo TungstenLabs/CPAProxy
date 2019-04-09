@@ -13,14 +13,7 @@
 #import "CPAProxyTorCommands.h"
 #import "CPAProxyResponseParser.h"
 #import "CPAProxyTorCommandConstants.h"
-
-#ifndef LOG_LEVEL_DEF
-#define LOG_LEVEL_DEF DDLogLevelDebug
-#endif
-
-#ifndef LOG_ASYNC_ENABLED
-#define LOG_ASYNC_ENABLED YES
-#endif
+#import "CPALogging.h"
 
 NSString * const CPAProxyDidStartSetupNotification = @"com.cpaproxy.setup.start";
 NSString * const CPAProxyDidFailSetupNotification = @"com.cpaproxy.setup.fail";
