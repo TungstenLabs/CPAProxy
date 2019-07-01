@@ -9,3 +9,5 @@
 #ifndef LOG_ASYNC_ENABLED
 #define LOG_ASYNC_ENABLED YES
 #endif
+
+static DDLogLevel ddLogLevel = DDLogLevelDebug;

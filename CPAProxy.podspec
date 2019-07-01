@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name            = "CPAProxy"
-  s.version         = "1.2.20"
+  s.version         = "1.2.21"
   s.summary         = "CPAProxy is a thin Objective-C wrapper around Tor."
   s.author          = "Claudiu-Vlad Ursache <claudiu.vlad.ursache@gmail.com>"
 
